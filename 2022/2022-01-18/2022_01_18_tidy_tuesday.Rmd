@@ -11,6 +11,11 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(tidytuesdayR)
 
+library(glue)
+
+library(tidymodels)
+library(themis)
+
 ```
 
 # Load the weekly Data
@@ -21,27 +26,31 @@ Download the weekly data and make available in the `tt` object.
 
 tt <- tt_load("2022-01-18")
 
-```
-
-
-# Readme
-
-Take a look at the readme for the weekly data to get insight on the dataset.
-This includes a data dictionary, source, and a link to an article on the data.
-
-```{r Readme, eval = interactive()}
-
 chocolate <- tt$chocolate
 
 ```
 
 # Wrangle
 
-Explore the data and process it into a nice format for plotting! Access each dataset by name by using a dollarsign after the `tt` object and then the name of the data set.
-
 ```{r Wrangle}
-## Things to fix
-# 
+ 
+## Tidy up the dataset by
+# - separating the ingredients column to get the number of ingredients and the ingredients
+# - converting chracter variables to numericals
+# - changing the ingredient code to the proper name
+# - Hot encoding the ingredients (For ML purposes)
+
+ingredients <- tribble(
+  ~code , ~ingredient,
+  ####################
+  "B", "Beans",
+  "S", "Sugar",
+  "S*", "Sweetener",
+  "C", "Cocoa Butter",
+  "V", "Vanilla",
+  "L","Lecithin",
+  "Sa","Salt"
+)
 
 chocolate_tidy <- chocolate %>% 
   separate(ingredients, into = c("no_ingredients","contents"), sep = "-") %>% 
@@ -54,7 +63,11 @@ chocolate_tidy <- chocolate %>%
   mutate(val = 1) %>% 
   pivot_wider(names_from = ingredient, values_from = val, values_fill = 0) %>% 
   select(-rowid)
+```
 
+```{r}
+
+## Getting the top and least most memorable characteristics from the data
 top_used_xtics <- chocolate_tidy %>% 
   select(most_memorable_characteristics) %>% 
   separate_rows(most_memorable_characteristics, sep = ",") %>% 
@@ -77,27 +90,17 @@ least_used_xtics <- chocolate_tidy %>%
 
 least_used_xtics <- glue_collapse(least_used_xtics, sep = "|")
 
+```
+
+```{r}
+
+## Adding an extra feature to the dataset to see if either the top / least used xtics were included 
 chocolate_tidy <- chocolate_tidy %>% 
   mutate(top_used_xtics = str_detect(most_memorable_characteristics, top_used_xtics) %>% as.integer(),
          least_used_xtics = str_detect(most_memorable_characteristics, least_used_xtics) %>% as.integer()) %>% 
   janitor::clean_names()
 ```
 
-```{r}
-ingredients <- tribble(
-  ~code , ~ingredient,
-  ####################
-  "B", "Beans",
-  "S", "Sugar",
-  "S*", "Sweetener",
-  "C", "Cocoa Butter",
-  "V", "Vanilla",
-  "L","Lecithin",
-  "Sa","Salt"
-)
-
-
-```
 
 ## Visualization
 ```{r}
@@ -111,8 +114,7 @@ ratings_by_country <- chocolate %>%
   count(company_location, wt = mean(rating))
            
 
-
-rating_map <- map_data(map = "world") %>% 
+(rating_map <- map_data(map = "world") %>% 
   left_join(ratings_by_country, by = c("region" = "company_location")) %>% 
   ggplot(aes(long, lat)) +
   geom_polygon(aes(group = group, fill = n),col = "white") +
@@ -126,7 +128,7 @@ rating_map <- map_data(map = "world") %>%
   ) +
   theme(
     plot.title = element_text(size = 16)
-  )
+  ))
 ```
 
 # Notes
@@ -137,23 +139,18 @@ The goal is to predict if a rating is above or below 3
 
 ```{r Model}
 
-library(tidymodels)
-library(themis)
-
 chocolate_tidy <- chocolate_tidy %>% 
   mutate(rating_bucket = ifelse(rating > 3, "above", "below")) 
 
 set.seed(1342)
 
 chocolate_split <- initial_split(chocolate_tidy, strata = rating_bucket)
-
 chocolate_train <- training(chocolate_split)
-
 chocolate_folds <- vfold_cv(chocolate_train, strata = rating_bucket)
 
 ```
 
-
+## Creating Recipe
 ```{r}
 chocolate_rec <- recipe(rating_bucket~., data = chocolate_train) %>% 
   step_rm(ref,company_manufacturer,review_date,most_memorable_characteristics,rating,specific_bean_origin_or_bar_name, no_ingredients, company_location, country_of_bean_origin) %>% 
@@ -163,13 +160,9 @@ chocolate_rec <- recipe(rating_bucket~., data = chocolate_train) %>%
   step_zv(all_predictors()) %>% 
   step_corr(all_numeric_predictors()) %>% 
   step_downsample(rating_bucket)
-
-chocolate_rec %>% 
-  prep() %>% 
-  juice() %>% 
-  count(rating_bucket)
 ```
 
+## Model Specification
 ```{r}
 ranger_spec <- rand_forest(min_n = tune(),mtry = tune(), trees = tune()) %>% 
   set_engine("ranger") %>% 
@@ -188,6 +181,10 @@ grid_latin_hypercube(min_n(), trees())
 
 metrics_ <- metric_set(accuracy, roc_auc, sens, spec)
 
+```
+
+## Model Tuning
+```{r}
 doParallel::registerDoParallel()
 
 ranger_tune <- tune_grid(
@@ -198,7 +195,10 @@ ranger_tune <- tune_grid(
   control = control_grid(verbose = TRUE, save_pred = TRUE, save_workflow = TRUE))
 
 doParallel::stopImplicitCluster()
+```
 
+## Model Exploration
+```{r}
 autoplot(ranger_tune)
 
 show_best(ranger_tune, "roc_auc")
@@ -207,6 +207,7 @@ final_ranger_wf <- ranger_workflow %>%
   finalize_workflow(select_best(ranger_tune, "roc_auc"))
 ```
 
+## Fitting Model
 ```{r}
 doParallel::registerDoParallel()
 
@@ -222,21 +223,16 @@ Save your image for sharing. Be sure to use the `#TidyTuesday` hashtag in your p
 
 ```{r}
 
-# This will save your most recent plot
-ggsave(
-  filename = "rating_map.png",
-  device = "png")
-
-ggsave(
-  "2022-01-18/rating_map.png",
-  plot = rating_map,
-  device = ragg::agg_png(
-    width = 15,
-    height = 9,
-    units = "in",
-    scaling = 1.2,
-    res = 720
-  )
-)
+# ggsave(
+#   "2022-01-18/rating_map.png",
+#   plot = rating_map,
+#   device = ragg::agg_png(
+#     width = 15,
+#     height = 9,
+#     units = "in",
+#     scaling = 1.2,
+#     res = 720
+#   )
+# )
 
 ```
