@@ -1,0 +1,172 @@
+---
+title: "TidyTemplate"
+date: 2022-01-25
+output: html_output
+---
+
+# TidyTuesday
+
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(tidytuesdayR)
+library(ggtext)
+library(showtext)
+
+
+font_add_google(name = "quicksand",  family = "quicksand")
+
+```
+
+# Load the weekly Data
+
+Download the weekly data and make available in the `tt` object.
+
+```{r Load}
+
+tt <- tt_load("2022-01-25")
+
+```
+
+
+# Readme
+
+Take a look at the readme for the weekly data to get insight on the dataset.
+This includes a data dictionary, source, and a link to an article on the data.
+
+```{r Readme, eval = interactive()}
+
+tt
+
+```
+
+
+# Glimpse Data
+
+Take an initial look at the format of the data available.
+
+```{r Glimpse}
+
+tt %>% 
+  map(glimpse)
+
+```
+
+# Wrangle
+
+Explore the data and process it into a nice format for plotting! Access each dataset by name by using a dollarsign after the `tt` object and then the name of the data set.
+
+```{r}
+## Function to pull game name after feeding it a decade and rating
+extract_name <- function(decade_x, rating){
+  
+  ratings %>% 
+  filter(year %in% c(1900:2021)) %>% 
+  mutate(decade = 10 * (year %/% 10),
+         decade = factor(decade)) %>% 
+  filter(decade == decade_x, average == rating) %>% 
+  select(name) %>% 
+  pull()
+  
+}
+
+```
+
+
+```{r Wrangle}
+
+ratings <- tt$ratings
+
+## Preparing data for plotting
+
+(ratings_by_decade <- ratings %>% 
+  filter(year %in% c(1900:2021)) %>% 
+  mutate(decade = 10 * (year %/% 10)) %>% 
+  select(decade, average) %>% 
+  group_by(decade) %>% 
+  summarize(n = n(),
+            highest = max(average),
+            lowest = min(average), .groups = "drop") %>% 
+  mutate(decade = factor(decade)) %>% 
+  mutate(name_h = map2_chr(decade, highest, extract_name),
+         name_l = map2_chr(decade, lowest, extract_name)) %>% 
+  mutate(n = format(n, big.mark=",",scientific=FALSE) %>% str_squish(),
+         y_axis = glue::glue("**{decade}s** (n={n})")) )
+
+```
+
+
+# Visualize
+
+Using your processed dataset, create your unique visualization.
+
+```{r Visualize}
+
+showtext_auto()
+
+(board_games_plot <- ratings_by_decade %>% 
+    
+  ggplot() +
+    
+  geom_vline(xintercept = 0, colour = "gray80") +
+  geom_vline(xintercept = 2.5, colour = "gray80") +
+  geom_vline(xintercept = 5.0, colour = "gray80") +
+  geom_vline(xintercept = 7.5, colour = "gray80") +
+  geom_vline(xintercept = 10, colour = "gray80") +
+    
+  geom_segment(aes(x = lowest, xend = highest, y = y_axis, yend = y_axis), col = "#C2C23A", size = 0.8) +
+  geom_point(aes(lowest,y_axis), col = "#124F7A", size = 3) +
+  geom_point(aes(highest,y_axis), col = "#BF1111", size = 3) +
+  
+  geom_text(aes(lowest,y_axis, label = name_l), vjust = 0, nudge_y = 0.3, size = 2.4, fontface = "bold", family = "quicksand") +
+  geom_text(aes(highest,y_axis, label = name_h), vjust = 0, nudge_y = 0.3, size = 2.4, fontface = "bold", family = "quicksand") + 
+  
+  scale_x_continuous(limits = c(0,10)) +
+  
+  labs(
+    title = "**Board games ratings by decade**",
+    subtitle = "Board games with the <span style = 'color:#124F7A;'>lowest</span> and <span style = 'color:#BF1111;'>highest</span> average rating by decade, published bewteen 1900 and 2021",
+    x = "Average Rating",
+    y = "Decade",
+    caption = "\nData: Kaggle by way of Board Games Geek, with a hattip to David and Georgios\n\nPlot: Orignal Plot made by Lee Olney, recreated by Emmanuel Ugochukwu"
+  ) +
+  
+  theme_minimal() +
+  
+  theme(text = element_text(family = "quicksand") ,
+        plot.title = element_markdown(hjust = 0.5),
+        plot.subtitle = element_markdown(size = 10, hjust = 0.5),
+        axis.text.y = element_markdown(hjust = 0),
+        axis.ticks = element_blank(),
+        axis.line.y = element_blank(),
+        axis.text = element_markdown(),
+        axis.title = element_text(size = 7),
+        plot.caption = element_text(size = 7, hjust = 1)))
+  
+```
+
+
+
+# Save Image
+
+Save your image for sharing. Be sure to use the `#TidyTuesday` hashtag in your post on twitter! 
+
+```{r}
+
+# This will save your most recent plot
+ggsave(
+  "board_games.png",
+  plot = board_games_plot,
+  device = ragg::agg_png(
+    width = 15,
+    height = 9,
+    units = "in",
+    scaling = 1.2,
+    res = 720
+  )
+)
+
+```

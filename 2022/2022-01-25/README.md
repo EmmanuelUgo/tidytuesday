@@ -1,5 +1,5 @@
 # Summary
 
-In this week \#tidytuesday data, we explore data on chocolate rating across different companies all over the world. We try to build a machine learning model to predict whether a particular rating is above 3/5 or not.
+In this week \#tidytuesday data, I tried to recreate an amazing data visualization by [Lee Olney](https://twitter.com/leeolney3?t=NmyrMV8D_7XOsVy0QOCEUA&s=09 "Twitter Handle"). I learnt some new tricks in ggplot.
 
-![](rating_map.png){width="900" height="550"}
+![](board_game.png)
