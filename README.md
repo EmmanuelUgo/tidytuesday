@@ -6,8 +6,8 @@ Hello and welcome to my \#tidytuesday repo where I save my contributions and ana
 
 Code: [View code](https://github.com/EmmanuelUgo/tidytuesday/tree/main/2022/2022-01-25)
 
-![](2022/2022-01-25/board_game.png)
+<img src="2022/2022-01-25/board_game.png" width="787"/>
 
 Code: [View Code](https://github.com/EmmanuelUgo/tidytuesday/tree/main/2022/2022-02-01)
 
-![](2022/2022-02-01/dog_plot.png)
+<img src="2022/2022-02-01/dog_plot.png" width="789"/>
