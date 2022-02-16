@@ -125,7 +125,7 @@ showtext_auto()
     text = element_text(family = "quicksand")
   
   ) )
-  
+
 ```
 
 # Save Image

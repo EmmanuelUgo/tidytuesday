@@ -1,0 +1,102 @@
+---
+title: "TidyTemplate"
+date: 2022-02-16
+output: html_output
+---
+
+# TidyTuesday
+
+Join the R4DS Online Learning Community in the weekly #TidyTuesday event!
+Every week we post a raw dataset, a chart or article related to that dataset, and ask you to explore the data.
+While the dataset will be “tamed”, it will not always be tidy! As such you might need to apply various R for Data Science techniques to wrangle the data into a true tidy format.
+The goal of TidyTuesday is to apply your R skills, get feedback, explore other’s work, and connect with the greater #RStats community!
+As such we encourage everyone of all skills to participate!
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(showtext)
+
+
+font_add_google(name = "Chakra Petch", family = "Chakra Petch")
+
+```
+
+# Load Data
+
+```{r Load}
+
+data <- tribble(
+  ~date,	~iliteracy_rate, 
+  #########################
+  1860, 99,
+  1870, 92.1, 
+  1880, 81.6,
+  1890, 67.2, 
+  1900, 50
+)
+  
+  
+```
+
+
+# Visualize
+
+
+```{r Visualize}
+
+showtext_auto()
+
+g <- ggplot() +
+  
+  geom_segment(data = data %>% mutate(date_end = 1940),
+               aes(x = iliteracy_rate, xend = iliteracy_rate, y = date, yend = date_end),
+               lineend = "square", lwd = 3.7, col = "#080807") +
+  
+  geom_segment(data = data %>% mutate(start_x = 100),
+               aes(x = start_x, xend = iliteracy_rate, y = date, yend = date),
+               lineend = "round", lwd = 3.7, col = "#383837") +
+  
+  geom_segment(data = data %>% mutate(start_x = 100),
+               aes(x = start_x + 0.1, xend = iliteracy_rate - 0.1, y = date, yend = date),
+               lineend = "round", lwd = 3, col = "#dccab2") +
+  
+  geom_text(data = data %>% mutate(label = ifelse(date == 1900,"(1900?)",as.character(date))), 
+            aes(x = 112, y = date, label = label), size = 3, hjust = 0) +
+  
+  geom_text(data = data %>% 
+              mutate(label = ifelse(date == 1900,
+                        glue::glue("({iliteracy_rate}%?)"),
+                        glue::glue("{iliteracy_rate}%"))),
+            aes(x = iliteracy_rate, y = 1942, label = label), size = 2.5, hjust = 0.5, vjust = 1) +
+  
+  annotate("text", x = 110, y = 1942, label = "PERCENT OF\nILLITERACY.", size = 2.2, hjust = 0.5) +
+
+  expand_limits(y = c(1860, 1945), x = c(0, 150)) +
+  
+  scale_y_reverse(breaks = c(1860, 1870, 1880, 1890, 1900)) +
+  scale_x_reverse() +
+  
+  labs(
+    title = "\nILLITERACY.",
+    caption = "\n#DuBoisChallenge2022 || Data: Anthony Starks || Plot: @emm_aguila",
+    x = NULL,
+    y = NULL
+  )  +
+  
+  theme(
+    axis.line = element_blank(),
+    axis.ticks = element_blank(),
+    axis.text = element_blank(),
+    panel.grid = element_blank(),
+    panel.background = element_blank(),
+    plot.background = element_rect(fill = "#dccab2"),
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    plot.caption = element_text(hjust = 0.5),
+    text = element_text(family = "Chakra Petch")
+  )
+```
+
+
