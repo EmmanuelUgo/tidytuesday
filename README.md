@@ -16,6 +16,6 @@ Code: [VIew Code](https://github.com/EmmanuelUgo/tidytuesday/tree/main/2022/2022
 
 <img src="2022/2022-02-15/dubois_challenge_6.png" width="789"/>
 
-Code: View Code
+Code: [View Code](https://github.com/EmmanuelUgo/tidytuesday/tree/main/2022/2022-03-08)
 
 <img src="2022/2022-03-08/African Map.png" title="Participation of African Countries in the ERASMUS program" width="789"/>
