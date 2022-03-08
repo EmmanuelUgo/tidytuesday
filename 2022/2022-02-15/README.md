@@ -14,5 +14,3 @@ I recreated challenge 6. The plot shows the level of illiteracy.
 
 ![  
 ](null)
-
-  

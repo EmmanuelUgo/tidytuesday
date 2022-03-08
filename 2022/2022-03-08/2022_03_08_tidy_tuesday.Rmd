@@ -1,0 +1,202 @@
+---
+title: "TidyTemplate"
+date: 2022-03-08
+output: html_document
+---
+
+# TidyTuesday
+
+Join the R4DS Online Learning Community in the weekly #TidyTuesday event!
+Every week we post a raw dataset, a chart or article related to that dataset, and ask you to explore the data.
+While the dataset will be “tamed”, it will not always be tidy! As such you might need to apply various R for Data Science techniques to wrangle the data into a true tidy format.
+The goal of TidyTuesday is to apply your R skills, get feedback, explore other’s work, and connect with the greater #RStats community!
+As such we encourage everyone of all skills to participate!
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(countrycode)
+library(cartogram)  
+library(maptools)     
+library(viridis)      
+library(patchwork)
+
+library(showtext)
+
+font_add_google(name = "quicksand",  family = "quicksand")
+
+showtext_auto()
+```
+
+# Load the weekly Data
+
+
+```{r Load}
+
+erasmus <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-03-08/erasmus.csv')
+
+```
+
+```{r}
+glimpse(erasmus)
+```
+
+
+# Wrangle
+
+Explore the data and process it into a nice format for plotting! Access each dataset by name by using a dollarsign after the `tt` object and then the name of the data set.
+
+
+
+```{r}
+top_african_dest <- erasmus %>% 
+  mutate(continent = countrycode(participant_nationality,
+                                               origin = 'iso2c',
+                                               destination = 'continent')) %>% 
+  filter(continent == "Africa") %>% 
+  count(receiving_country_code, sort = T) %>% 
+  mutate(receiving_country = countrycode(receiving_country_code,
+                                               origin = 'iso2c',
+                                               destination = 'country.name')) %>% 
+  mutate(receiving_country = case_when(
+    receiving_country_code == "EL" ~ "Greece",
+    receiving_country_code == "UK" ~ "United Kingdom",
+    TRUE ~ receiving_country
+  )) %>% 
+  mutate(receiving_country_code = countrycode(receiving_country,
+                                               origin = 'country.name',
+                                               destination = 'iso2c'))
+```
+
+
+```{r}
+top_5 <- top_african_dest %>% 
+  slice_max(order_by = n, n = 5) %>% 
+  mutate(receiving_country = fct_reorder(receiving_country, -n))
+
+labels <- top_5 %>% 
+  mutate(n = n/2)
+
+p1 <- ggplot() +
+  geom_col(data = top_5, aes(x = 500, receiving_country), fill = "#f5f5f4", col = "black", width = 0.4) +
+  geom_col(data = top_5, aes(n, receiving_country), width = 0.4, fill = "black") +
+  geom_text(data = labels,aes(n, receiving_country, label = receiving_country), 
+            color = "white", size = 2, family = "quicksand") +
+  labs(
+    x = NULL, y = NULL
+  )+
+  scale_x_continuous(breaks = c(0, 250, 500)) +
+  theme(
+    text = element_text(color = "#22211d", family = "quicksand"),
+    aspect.ratio = 1/2,
+    axis.line = element_blank(),
+    axis.text.y  = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid = element_blank(),
+    plot.background = element_rect(fill = NA, color = NA),
+    panel.background = element_rect(fill = NA, color = NA),
+    legend.background = element_rect(fill = NA, color = NA),
+    plot.title = element_text(
+      size = 18,
+      hjust = 0.5,
+      color = "#4e4d47"
+    ),
+    legend.position = "none"
+  )
+```
+
+
+```{r Wrangle}
+
+african_countries <- erasmus %>% 
+  count(participant_nationality, wt = sum(participants)) %>% 
+  mutate(continent = countrycode(participant_nationality,
+                                         origin = 'iso2c',
+                                         destination = 'continent')) %>% 
+
+  mutate(participant_nationality = countrycode(participant_nationality,
+                                               origin = 'iso2c',
+                                               destination = 'country.name')) %>% 
+  filter(continent == "Africa") 
+  
+
+african_countries <- african_countries %>% 
+  mutate(iso3 = countrycode(participant_nationality,
+                                         origin = 'country.name',
+                                         destination = 'iso3c')) %>% 
+  select(iso3, n)
+
+
+```
+
+```{r}
+# Get the shape file of Africa
+data(wrld_simpl)
+afr=wrld_simpl[wrld_simpl$REGION==2,]
+ 
+afr_df <- afr %>% 
+  broom::tidy() %>% 
+  left_join(african_countries, by = c("id" = "iso3"))
+```
+
+```{r}
+p2 <- ggplot() +
+  geom_polygon(data = afr_df, aes(x = long, y = lat, group = group, fill = n), size = 0 , alpha = 0.9, colour = "black") +
+  
+  annotate("text", x = -18, y = -1, label = "Top 5 Receiving Countries",
+  colour = "black", family = "quicksand", size = 3, fontface = "bold.italic") +
+  
+  annotate("segment", x = 43, xend = 40, y = 22, yend = 17,
+  colour = "yellow", arrow = arrow(length = unit(0.2, "cm"))) +
+  
+  annotate("text", x = 50, y = 25, label = "Eritrea has the highest\nnumber of participants",
+  colour = "black", family = "quicksand", size = 2.5) +
+
+  theme_void() +
+  scale_fill_viridis(name="# of Participants",
+                     breaks=c(1,50, 100, 200), 
+                     labels = c("1", "50", "100", "200+"),
+                     guide = guide_legend(keyheight = unit(2, units = "mm"), 
+                                           keywidth=unit(6, units = "mm"),
+                                           label.position = "bottom",
+                                           title.position = 'top',
+                                           nrow=1,
+                                           title.hjust = 0.5)) +
+  
+  labs(title = "African Participants in the ERASMUS program",
+       caption = "**Data:** Data.Europa || **Plot:** @emm_aguila<br>") +
+  ylim(-40,40) +
+  xlim(-40,80) +
+  theme(
+    text = element_text(color = "#22211d", family = "quicksand"), 
+    plot.background = element_rect(fill = "#f5f5f4", color = NA), 
+    panel.background = element_rect(fill = "#f5f5f4", color = NA), 
+    legend.background = element_rect(fill = "#f5f5f4", color = NA),
+    plot.title = element_text(size= 12, hjust=0.5, color = "#4e4d47", face = "bold",
+                              margin = margin(b = -0.1, t = 0.4, l = 2, unit = "cm")),
+    plot.caption = ggtext::element_markdown(size= 8, hjust=0.5, color = "#4e4d47"),
+    legend.position = c(0.8, 0.09)
+  ) +
+  coord_map()
+
+p2
+```
+
+
+```{r}
+p12 <- p2 + inset_element(p1, left = 0.0001, bottom = 0.1, right = 0.43, top = 0.5)
+```
+
+
+# Visualize
+
+Using your processed dataset, create your unique visualization.
+
+```{r Visualize}
+
+p12
+  
+```
+
