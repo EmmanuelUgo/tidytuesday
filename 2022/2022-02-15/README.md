@@ -12,5 +12,9 @@ I recreated challenge 6. The plot shows the level of illiteracy.
 
 <img src="dubois_challenge_6.png" width="500"/>
 
+<<<<<<< HEAD
 ![  
 ](null)
+=======
+  
+>>>>>>> 8ebef9849f044981094a4bc086921ed2d07d7690
