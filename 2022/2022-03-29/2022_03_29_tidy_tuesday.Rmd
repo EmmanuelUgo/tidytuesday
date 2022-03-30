@@ -1,0 +1,139 @@
+---
+title: "TidyTemplate"
+date: 2022-03-29
+output: html_document
+---
+
+# TidyTuesday
+
+Join the R4DS Online Learning Community in the weekly #TidyTuesday event!
+Every week we post a raw dataset, a chart or article related to that dataset, and ask you to explore the data.
+While the dataset will be “tamed”, it will not always be tidy! As such you might need to apply various R for Data Science techniques to wrangle the data into a true tidy format.
+The goal of TidyTuesday is to apply your R skills, get feedback, explore other’s work, and connect with the greater #RStats community!
+As such we encourage everyone of all skills to participate!
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(tidytuesdayR)
+
+```
+
+# Load the weekly Data
+
+Download the weekly data and make available in the `tt` object.
+
+```{r Load}
+
+tt <- tt_load("2022-03-29")
+
+```
+
+
+# Readme
+
+Take a look at the readme for the weekly data to get insight on the dataset.
+This includes a data dictionary, source, and a link to an article on the data.
+
+```{r Readme, eval = interactive()}
+
+tt
+
+```
+
+
+# Glimpse Data
+
+Take an initial look at the format of the data available.
+
+```{r Glimpse}
+
+tt %>% 
+  map(glimpse)
+
+```
+
+# Wrangle
+
+Explore the data and process it into a nice format for plotting! Access each dataset by name by using a dollarsign after the `tt` object and then the name of the data set.
+
+```{r Wrangle}
+
+sport_tbl <- tt$sports
+
+main_tbl <-
+  sport_tbl %>% 
+  select(sports, sum_partic_men, sum_partic_women) %>% 
+  drop_na() %>% 
+  
+  group_by( sports) %>% 
+  summarize(men = sum(sum_partic_men, na.rm = TRUE),
+            women = sum(sum_partic_women, na.rm = TRUE)) %>% 
+  ungroup()  %>% 
+  mutate(diff = men - women) %>% 
+  mutate(favor = ifelse(diff < 0, "Female", "Male")) %>% 
+  mutate(perc_men = (men - women)/(men + women)) %>% 
+  mutate(sports = fct_reorder(sports, (perc_men))) %>% 
+  filter(diff != 0)
+```
+
+
+# Visualize
+
+Using your processed dataset, create your unique visualization.
+
+```{r Visualize}
+
+ggplot(data = main_tbl) +
+  
+  geom_segment(aes(y = sports, yend = sports, x = 0, xend = perc_men, col = favor),
+               size = 1.5, ,lineend = "round")  +
+  
+  annotate("text", x = -0.6, y = 12, label = "More Females",
+           size = 3, family = "quicksand", color = "black") +
+  
+  annotate("text", x = 0.6, y = 31, label = "More Males",
+           size = 3, family = "quicksand", color = "black") +
+ 
+
+  scale_x_continuous(labels = scales::percent) +
+  
+  theme_minimal() +
+  
+  labs(
+    title = "Gender Popularity in College Sports",
+    y = NULL,
+    x = "Percentage Popularity",
+    caption = "<br>**Data:** Equity in Athletics Data Analysis || **Plot:** @emm_aguila"
+  ) +
+  
+  theme(
+    text = element_text(family = "quicksand"),
+    plot.caption = ggtext::element_markdown(size= 8, color = "#4e4d47"),
+    plot.background = element_rect(fill = "#f5f5f4", color = NA), 
+    panel.background = element_rect(fill = "#f5f5f4", color = NA),
+    plot.title = element_text(size = 20, face = "bold"),
+    plot.subtitle = element_text(vjust = 0.5),
+    axis.text.x = element_text(size = 7),
+    axis.title.x = element_text(size = 8),
+    axis.text.y  = element_text(hjust = 1, vjust = 0.6, size = 7, face = "bold"),
+    legend.position = "none",
+    panel.spacing.y = unit(6, "lines")
+  ) 
+  
+```
+
+# Save Image
+
+Save your image for sharing. Be sure to use the `#TidyTuesday` hashtag in your post on twitter! 
+
+```{r}
+
+# This will save your most recent plot
+ggsave(
+  filename = "My TidyTuesday Plot.png",
+  device = "png")
+
+```

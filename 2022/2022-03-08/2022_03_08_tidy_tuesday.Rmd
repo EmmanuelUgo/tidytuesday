@@ -6,11 +6,7 @@ output: html_document
 
 # TidyTuesday
 
-Join the R4DS Online Learning Community in the weekly #TidyTuesday event!
-Every week we post a raw dataset, a chart or article related to that dataset, and ask you to explore the data.
-While the dataset will be “tamed”, it will not always be tidy! As such you might need to apply various R for Data Science techniques to wrangle the data into a true tidy format.
-The goal of TidyTuesday is to apply your R skills, get feedback, explore other’s work, and connect with the greater #RStats community!
-As such we encourage everyone of all skills to participate!
+Join the R4DS Online Learning Community in the weekly #TidyTuesday event! Every week we post a raw dataset, a chart or article related to that dataset, and ask you to explore the data. While the dataset will be "tamed", it will not always be tidy! As such you might need to apply various R for Data Science techniques to wrangle the data into a true tidy format. The goal of TidyTuesday is to apply your R skills, get feedback, explore other's work, and connect with the greater #RStats community! As such we encourage everyone of all skills to participate!
 
 ```{r setup, include=FALSE}
 
@@ -32,7 +28,6 @@ showtext_auto()
 
 # Load the weekly Data
 
-
 ```{r Load}
 
 erasmus <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-03-08/erasmus.csv')
@@ -43,12 +38,9 @@ erasmus <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/ti
 glimpse(erasmus)
 ```
 
-
 # Wrangle
 
 Explore the data and process it into a nice format for plotting! Access each dataset by name by using a dollarsign after the `tt` object and then the name of the data set.
-
-
 
 ```{r}
 top_african_dest <- erasmus %>% 
@@ -69,7 +61,6 @@ top_african_dest <- erasmus %>%
                                                origin = 'country.name',
                                                destination = 'iso2c'))
 ```
-
 
 ```{r}
 top_5 <- top_african_dest %>% 
@@ -106,7 +97,6 @@ p1 <- ggplot() +
     legend.position = "none"
   )
 ```
-
 
 ```{r Wrangle}
 
@@ -184,11 +174,9 @@ p2 <- ggplot() +
 p2
 ```
 
-
 ```{r}
 p12 <- p2 + inset_element(p1, left = 0.0001, bottom = 0.1, right = 0.43, top = 0.5)
 ```
-
 
 # Visualize
 
@@ -199,4 +187,3 @@ Using your processed dataset, create your unique visualization.
 p12
   
 ```
-
